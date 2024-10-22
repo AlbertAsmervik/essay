@@ -6,13 +6,21 @@ from datasets import Dataset
 train_df = pd.read_csv('essay-br/splits/training.csv')
 test_df = pd.read_csv('essay-br/splits/testing.csv')
 
+# Convert numerical scores to strings (as explained earlier)
+train_df['score'] = train_df['score'].astype(str)
+test_df['score'] = test_df['score'].astype(str)
+
 # Initialize tokenizer and model
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 
-# Tokenize the essay column for training
+# Combine the essay text and score
+train_df['input_text'] = train_df['essay'] + ' [SEP] ' + train_df['score']
+test_df['input_text'] = test_df['essay'] + ' [SEP] ' + test_df['score']
+
+# Tokenize the input data
 def tokenize_function(examples):
-    return tokenizer(examples["essay"], truncation=True, padding="max_length")
+    return tokenizer(examples["input_text"], truncation=True, padding="max_length")
 
 # Convert pandas DataFrame to Hugging Face Dataset
 train_dataset = Dataset.from_pandas(train_df)
@@ -22,7 +30,7 @@ test_dataset = Dataset.from_pandas(test_df)
 train_dataset = train_dataset.map(tokenize_function, batched=True)
 test_dataset = test_dataset.map(tokenize_function, batched=True)
 
-# Specify the columns the model should use for input and target
+# Set format for PyTorch
 train_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
 test_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
 
@@ -45,5 +53,11 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-# Fine-tune the model
-trainer.train()
+# Training function
+def main():
+    # Fine-tune the model
+    trainer.train()
+
+# Ensure the script doesn't automatically execute when imported
+if __name__ == "__main__":
+    main()
