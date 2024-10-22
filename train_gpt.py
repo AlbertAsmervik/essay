@@ -6,7 +6,7 @@ from datasets import Dataset
 train_df = pd.read_csv('essay-br/splits/training.csv')
 test_df = pd.read_csv('essay-br/splits/testing.csv')
 
-# Convert numerical scores to strings (as explained earlier)
+# Convert numerical scores to strings (since GPT generates text)
 train_df['score'] = train_df['score'].astype(str)
 test_df['score'] = test_df['score'].astype(str)
 
@@ -14,13 +14,18 @@ test_df['score'] = test_df['score'].astype(str)
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 
-# Combine the essay text and score
+# Set the padding token to be the same as the end-of-sequence token
+tokenizer.pad_token = tokenizer.eos_token
+
+# Combine the essay text and score (as a single task for GPT to learn to predict the score)
 train_df['input_text'] = train_df['essay'] + ' [SEP] ' + train_df['score']
 test_df['input_text'] = test_df['essay'] + ' [SEP] ' + test_df['score']
 
 # Tokenize the input data
 def tokenize_function(examples):
-    return tokenizer(examples["input_text"], truncation=True, padding="max_length")
+    tokens = tokenizer(examples["input_text"], truncation=True, padding="max_length")
+    tokens["labels"] = tokens["input_ids"].copy()  # Set the labels to be the same as input_ids
+    return tokens
 
 # Convert pandas DataFrame to Hugging Face Dataset
 train_dataset = Dataset.from_pandas(train_df)
@@ -30,17 +35,17 @@ test_dataset = Dataset.from_pandas(test_df)
 train_dataset = train_dataset.map(tokenize_function, batched=True)
 test_dataset = test_dataset.map(tokenize_function, batched=True)
 
-# Set format for PyTorch
-train_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
-test_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
+# Set format for PyTorch (including labels)
+train_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
+test_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
 
 # Training Arguments
 training_args = TrainingArguments(
     output_dir="./results",
     evaluation_strategy="epoch",
     learning_rate=2e-5,
-    per_device_train_batch_size=4,
-    per_device_eval_batch_size=4,
+    per_device_train_batch_size=2,  # Adjust for memory
+    per_device_eval_batch_size=2,
     num_train_epochs=3,
     weight_decay=0.01,
 )
@@ -53,11 +58,6 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-# Training function
-def main():
-    # Fine-tune the model
-    trainer.train()
+# Fine-tune the models
+trainer.train()
 
-# Ensure the script doesn't automatically execute when imported
-if __name__ == "__main__":
-    main()
