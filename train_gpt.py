@@ -3,16 +3,16 @@ from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArgume
 from datasets import Dataset
 
 # Load dataset
-train_df = pd.read_csv('essay-br/splits/training.csv')  # Adjust path if needed
+train_df = pd.read_csv('essay-br/splits/training.csv')
 test_df = pd.read_csv('essay-br/splits/testing.csv')
 
 # Initialize tokenizer and model
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 
-# Tokenize the training data
+# Tokenize the essay column for training
 def tokenize_function(examples):
-    return tokenizer(examples["essay_text"], truncation=True, padding="max_length")
+    return tokenizer(examples["essay"], truncation=True, padding="max_length")
 
 # Convert pandas DataFrame to Hugging Face Dataset
 train_dataset = Dataset.from_pandas(train_df)
@@ -22,9 +22,9 @@ test_dataset = Dataset.from_pandas(test_df)
 train_dataset = train_dataset.map(tokenize_function, batched=True)
 test_dataset = test_dataset.map(tokenize_function, batched=True)
 
-# Specify the columns the model should use
-train_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
-test_dataset.set_format("torch", columns=["input_ids", "attention_mask", "labels"])
+# Specify the columns the model should use for input and target
+train_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
+test_dataset.set_format("torch", columns=["input_ids", "attention_mask"])
 
 # Training Arguments
 training_args = TrainingArguments(
