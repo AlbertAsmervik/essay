@@ -10,9 +10,9 @@ test_df = pd.read_csv('essay-br/splits/testing.csv')
 train_df['score'] = train_df['score'].astype(str)
 test_df['score'] = test_df['score'].astype(str)
 
-# Initialize tokenizer and model
-tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-model = GPT2LMHeadModel.from_pretrained('gpt2')
+# Initialize tokenizer and model (DistilGPT-2)
+tokenizer = GPT2Tokenizer.from_pretrained('distilgpt2')
+model = GPT2LMHeadModel.from_pretrained('distilgpt2')
 
 # Set the padding token to be the same as the end-of-sequence token
 tokenizer.pad_token = tokenizer.eos_token
@@ -44,10 +44,12 @@ training_args = TrainingArguments(
     output_dir="./results",
     evaluation_strategy="epoch",
     learning_rate=2e-5,
-    per_device_train_batch_size=2,  # Adjust for memory
-    per_device_eval_batch_size=2,
+    per_device_train_batch_size=1,  # Adjust for memory
+    per_device_eval_batch_size=1,
     num_train_epochs=3,
     weight_decay=0.01,
+    logging_steps=10,
+    log_level="info"
 )
 
 # Trainer
@@ -58,6 +60,7 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-# Fine-tune the models
+# Fine-tune the model
 trainer.train()
+
 
