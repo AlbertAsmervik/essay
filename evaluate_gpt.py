@@ -1,6 +1,15 @@
 from train_gpt import trainer, test_dataset, tokenizer, test_df
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
+# Update training arguments to run on CPU and reduce evaluation batch size, i dont have the capacity to use MPS
+from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    output_dir="./results",
+    per_device_eval_batch_size=1,  # Use the smallest possible batch size to reduce memory usage
+    no_cuda=True  # Force evaluation to use the CPU
+)
+
 # Use the trainer's predict function to get predictions on the test dataset
 predictions = trainer.predict(test_dataset)
 
