@@ -60,7 +60,8 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-# Fine-tune the model
-trainer.train()
+# Fine-tune the model (only run when executing this file directly)
+if __name__ == "__main__":
+    trainer.train()
 
 
